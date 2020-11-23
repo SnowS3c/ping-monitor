@@ -37,8 +37,12 @@ function obtener_ips(){
 # Funcion que realiza el ping
 function ping_check(){
     ip="$1"
-    #ping -O "$ip" >> "$log_file"
-# while read -r line; do echo "Linea: $line"; done < <(ping 192.168.100.1)
+    while read -r linea; do
+        if [[ "$linea" =~ "no answer" ]]; then
+            echo "Error: $linea"
+        fi
+        echo "Linea: $line"
+    done < <(ping -O "$ip")
 }
 
 
@@ -58,9 +62,12 @@ for mac in "${params[@]:1}"; do
 done
 
 
-
+# INICIALIZANDO
 obtener_ips
-for id in "${!macs[@]}"; do
-    echo "mac: ${macs[$id]} ip: ${ips[$id]}"
+for ip in "${ips[@]}"; do
+    ping_check "$ip"
 done
+#for id in "${!macs[@]}"; do
+#    echo "mac: ${macs[$id]} ip: ${ips[$id]}"
+#done
 
