@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #####################
-# No es necesario dividir la ventana con tmux como hizo leo pero queda to guapo
+# No es necesario dividir la ventana con tmux como hizo leo pero queda bien
 ######################
 
 
