@@ -1,9 +1,7 @@
 #!/bin/bash
 
-#####################
-# No es necesario dividir la ventana con tmux como hizo leo pero queda bien
-######################
-
+# meter comando tmux dentro de la función ping_ip
+# tmux detach-client , sale de la sesion pero sin cerrarla.
 
 
 # Comprobar que se ejecuta como adminístrador
@@ -15,8 +13,14 @@
 ips=()
 macs=()
 log_file="/var/log/ping-monitor.log"
+Cl_v="\e[32m"   # Color verde
+Cl_r="\e[31m"   # Color rojo
+Cl_end="\e[0m"  # Color normal
 
-
+export log_file
+export Cl_v
+export Cl_r
+export Cl_end
 
 ########################
 #   FUNCIONES
@@ -35,17 +39,33 @@ function obtener_ips(){
 
 
 # Funcion que realiza el ping
-function ping_check(){
+function ping_ip(){
     ip="$1"
+    icmp_last=0
+    error=1 # 1: falso  0: verdadero
+    no_error_count=0
     while read -r linea; do
-        if [[ "$linea" =~ "no answer" ]]; then
-            echo "Error: $linea"
+        [[ "$linea" =~ ^PING ]] && continue   # Para saltar la primera línea
+        icmp=$(echo "$linea" | cut -d" " -f 5 | cut -d"=" -f2)
+
+        # Ping correcto
+        if [[ "$linea" =~ "64 bytes" ]]; then
+            echo -en "[${Cl_v}${ip}${Cl_end}]"
+            [ "$error" -eq 0 ] && echo -en "${Cl_r}" && ((no_error_count++))
+            [ "$no_error_count" -eq 30 ] && echo "Error Fin [$(date +%Y-%m-%d\ %H:%M:%S)] Máquina $ip" >> "$log_file" && error=1 && no_error_count=0
+            echo -e "$linea${Cl_end}"
+
+        # Ping incorrecto
+        elif [[ "$linea" =~ "no answer" ]] || [[ "$linea" =~ "Unreachable" ]] || [[ "$icmp" -ne $((icmp_last+1)) ]]; then
+            echo -e "[${Cl_r}${ip}${Cl_end}] ${Cl_r}$linea${Cl_end}"
+
+            [ "$error" -eq 1 ] && echo "Error Inicio [$(date +%Y-%m-%d\ %H:%M:%S)] Máquina $ip" >> "$log_file" && error=0
         fi
-        echo "Linea: $line"
+#        echo "icmp: $icmp   last_icmp: $icmp_last"
+        icmp_last="$icmp"
     done < <(ping -O "$ip")
 }
-
-
+export -f ping_ip
 
 
 ##############################
@@ -64,9 +84,13 @@ done
 
 # INICIALIZANDO
 obtener_ips
+tmux new-session -s prueba -d
 for ip in "${ips[@]}"; do
-    ping_check "$ip"
+    tmux send-keys "ping_ip $ip" C-m
+#    ping_ip "$ip"
 done
+tmux attach-session -t prueba
+#tmux select-layout even-horizonal
 #for id in "${!macs[@]}"; do
 #    echo "mac: ${macs[$id]} ip: ${ips[$id]}"
 #done
