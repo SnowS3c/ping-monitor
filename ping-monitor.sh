@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# meter comando tmux dentro de la función ping_ip
 # tmux detach-client , sale de la sesion pero sin cerrarla.
 
 
@@ -21,6 +20,9 @@ export log_file
 export Cl_v
 export Cl_r
 export Cl_end
+
+
+
 
 ########################
 #   FUNCIONES
@@ -66,6 +68,8 @@ function ping_ip(){
     done < <(ping -O "$ip")
 }
 export -f ping_ip
+
+
 
 
 ##############################
