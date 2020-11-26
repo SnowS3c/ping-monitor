@@ -51,21 +51,34 @@ function ping_ip(){
         icmp=$(echo "$linea" | cut -d" " -f 5 | cut -d"=" -f2)
 
         # Ping correcto
-        if [[ "$linea" =~ "64 bytes" ]]; then
+        if [[ "$linea" =~ "64 bytes" ]] && [[ "$icmp" -eq $((icmp_last+1)) ]]; then
             echo -en "[${Cl_v}${ip}${Cl_end}]"
+
+            # Si esta en modo de error.
             [ "$error" -eq 0 ] && echo -en "${Cl_r}" && ((no_error_count++))
+
+            # Si lleva 30 pings seguidos sin error.
             [ "$no_error_count" -eq 30 ] && echo "Error Fin [$(date +%Y-%m-%d\ %H:%M:%S)] Máquina $ip" >> "$log_file" && error=1 && no_error_count=0
             echo -e "$linea${Cl_end}"
 
         # Ping incorrecto
-        elif [[ "$linea" =~ "no answer" ]] || [[ "$linea" =~ "Unreachable" ]] || [[ "$icmp" -ne $((icmp_last+1)) ]]; then
+        else
             echo -e "[${Cl_r}${ip}${Cl_end}] ${Cl_r}$linea${Cl_end}"
 
+            # Si no estaba en modo de error.
             [ "$error" -eq 1 ] && echo "Error Inicio [$(date +%Y-%m-%d\ %H:%M:%S)] Máquina $ip" >> "$log_file" && error=0
         fi
-#        echo "icmp: $icmp   last_icmp: $icmp_last"
+
         icmp_last="$icmp"
-    done < <(ping -O "$ip")
+
+        #read -t 0.5 -n 1 ans
+        #echo "ANS: $ans"
+        #[ "$ans" = q ] && tmux detach-client
+
+    done < <(ping -O "$ip")&
+    while read -s -n 1 ans; do
+        [[ "$ans" = @("q"|"") ]] && tmux kill-session -t ping-session
+    done
 }
 export -f ping_ip
 
@@ -88,14 +101,13 @@ done
 
 # INICIALIZANDO
 obtener_ips
-tmux new-session -s prueba -d
+tmux new-session -s ping-session -d
 for ip in "${ips[@]}"; do
     tmux send-keys "ping_ip $ip" C-m
-#    ping_ip "$ip"
+    tmux split-window -h -t ping-session
 done
-tmux attach-session -t prueba
-#tmux select-layout even-horizonal
-#for id in "${!macs[@]}"; do
-#    echo "mac: ${macs[$id]} ip: ${ips[$id]}"
-#done
+tmux send-keys "exit" C-m
+tmux select-layout even-horizonal    # No rula
+tmux attach-session -t ping-session
+
 
