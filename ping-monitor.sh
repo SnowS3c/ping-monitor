@@ -2,7 +2,6 @@
 
 # tmux detach-client , sale de la sesion pero sin cerrarla.
 
-
 # Comprobar que se ejecuta como adminístrador
 ! [ $(id -u) -eq 0 ] && echo "Se necesitan permisos de adminístrador" && exit 1
 
@@ -12,14 +11,24 @@
 ips=()
 macs=()
 log_file="/var/log/ping-monitor.log"
-Cl_v="\e[32m"   # Color verde
-Cl_r="\e[31m"   # Color rojo
 Cl_end="\e[0m"  # Color normal
+Cl_r="\e[31m"   # Color rojo
+Cl_v="\e[32m"   # Color verde
+Cl_m="\e[33m"   # Color marron
+Cl_a="\e[34m"   # Color azul
+Cl_p="\e[35m"   # Color morado
+Cl_c="\e[36m"   # Color cyan
+colores=($Cl_v $Cl_m $Cl_a $Cl_p $Cl_c)
+
 
 export log_file
-export Cl_v
-export Cl_r
 export Cl_end
+export Cl_r
+export Cl_v
+export Cl_m
+export Cl_a
+export Cl_p
+export Cl_c
 
 
 
@@ -27,7 +36,6 @@ export Cl_end
 ########################
 #   FUNCIONES
 ########################
-
 # Funcion para obtener las ips y almacenarlas en el array ips
 function obtener_ips(){
     echo -n "Buscando macs..."
@@ -43,6 +51,7 @@ function obtener_ips(){
 # Funcion que realiza el ping
 function ping_ip(){
     ip="$1"
+    color="$2"
     icmp_last=0
     error=1 # 1: falso  0: verdadero
     no_error_count=0
@@ -52,21 +61,22 @@ function ping_ip(){
 
         # Ping correcto
         if [[ "$linea" =~ "64 bytes" ]] && [[ "$icmp" -eq $((icmp_last+1)) ]]; then
-            echo -en "[${Cl_v}${ip}${Cl_end}]"
+            echo -en "[\\${color}${ip}${Cl_end}]"
 
             # Si esta en modo de error.
             [ "$error" -eq 0 ] && echo -en "${Cl_r}" && ((no_error_count++))
 
             # Si lleva 30 pings seguidos sin error.
-            [ "$no_error_count" -eq 30 ] && echo "Error Fin [$(date +%Y-%m-%d\ %H:%M:%S)] Máquina $ip" >> "$log_file" && error=1 && no_error_count=0
+            [ "$no_error_count" -eq 30 ] && echo "[$(date +%Y-%m-%d\ %H:%M:%S)] Error Fin Máquina $ip" >> "$log_file" && error=1 && no_error_count=0
             echo -e "$linea${Cl_end}"
 
         # Ping incorrecto
         else
-            echo -e "[${Cl_r}${ip}${Cl_end}] ${Cl_r}$linea${Cl_end}"
-
+            #echo -e "[${Cl_r}${ip}${Cl_end}] ${Cl_r}$linea${Cl_end}"
+            echo -e "[\\${color}${ip}${Cl_end}] ${Cl_r}$linea${Cl_end}"
+            no_error_count=0
             # Si no estaba en modo de error.
-            [ "$error" -eq 1 ] && echo "Error Inicio [$(date +%Y-%m-%d\ %H:%M:%S)] Máquina $ip" >> "$log_file" && error=0
+            [ "$error" -eq 1 ] && echo "[$(date +%Y-%m-%d\ %H:%M:%S)] Error Inicio Máquina $ip" >> "$log_file" && error=0
         fi
 
         icmp_last="$icmp"
@@ -102,8 +112,11 @@ done
 # INICIALIZANDO
 obtener_ips
 tmux new-session -s ping-session -d
+i=0
 for ip in "${ips[@]}"; do
-    tmux send-keys "ping_ip $ip" C-m
+    color=${colores[$i]}
+    ((i++))
+    tmux send-keys "ping_ip $ip $color" C-m
     tmux split-window -h -t ping-session
 done
 tmux send-keys "exit" C-m
