@@ -2,7 +2,7 @@
 
 ##############################
 #   Modificar log.
-#   Añadir hora inicio ping-monitor
+#   Mostrar MAC en vez de IP
 ##############################
 
 # Comprobar que se ejecuta como adminístrador
@@ -70,7 +70,7 @@ function ping_ip(){
             [ "$error" -eq 0 ] && echo -en "${Cl_r}" && ((no_error_count++))
 
             # Si lleva 30 pings seguidos sin error.
-            [ "$no_error_count" -eq 30 ] && echo "[$(date +%Y-%m-%d\ %H:%M:%S)] Error Fin Máquina $ip" >> "$log_file" && error=1 && no_error_count=0
+            [ "$no_error_count" -eq 30 ] && echo -e "[$(date +%Y-%m-%d\ %H:%M:%S)] [\\${color}${ip}${Cl_end}]\t[${Cl_r}Error Fin${Cl_end}]" >> "$log_file" && error=1 && no_error_count=0
             echo -e "$linea${Cl_end}"
 
         # Ping incorrecto
@@ -79,7 +79,7 @@ function ping_ip(){
             echo -e "[\\${color}${ip}${Cl_end}] ${Cl_r}$linea${Cl_end}"
             no_error_count=0
             # Si no estaba en modo de error.
-            [ "$error" -eq 1 ] && echo "[$(date +%Y-%m-%d\ %H:%M:%S)] Error Inicio Máquina $ip" >> "$log_file" && error=0
+            [ "$error" -eq 1 ] && echo -e "[$(date +%Y-%m-%d\ %H:%M:%S)] [\\${color}${ip}${Cl_end}]\t[Error Inicio]" >> "$log_file" && error=0
         fi
 
         icmp_last="$icmp"
@@ -117,6 +117,9 @@ done
 # INICIALIZANDO
 obtener_ips
 tmux new-session -s ping-session -d
+
+echo -e "[$(date +%Y-%m-%d\ %H:%M:%S)] ###################### INICIO PING ###################################" >> "$log_file"
+
 i=0
 for ip in "${ips[@]}"; do
     color=${colores[$i]}
@@ -131,7 +134,8 @@ tmux attach-session -t ping-session
 
 # En caso de que no se haya matado la sesion
 while tmux list-session | grep ping-session &> /dev/null; do
-    less "$log_file"
+    less -R "$log_file"
     tmux attach-session -t ping-session
 done
 
+echo -e "####################################################################################################\n\n" >> "$log_file"
