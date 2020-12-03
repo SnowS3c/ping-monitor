@@ -1,6 +1,9 @@
 #!/bin/bash
 
-# tmux detach-client , sale de la sesion pero sin cerrarla.
+##############################
+#   Modificar log.
+#   Añadir hora inicio ping-monitor
+##############################
 
 # Comprobar que se ejecuta como adminístrador
 ! [ $(id -u) -eq 0 ] && echo "Se necesitan permisos de adminístrador" && exit 1
@@ -56,7 +59,7 @@ function ping_ip(){
     error=1 # 1: falso  0: verdadero
     no_error_count=0
     while read -r linea; do
-        [[ "$linea" =~ ^PING ]] && continue   # Para saltar la primera línea
+        [[ "$linea" =~ ^PING ]] && sleep 1 && clear && continue   # Para saltar la primera línea
         icmp=$(echo "$linea" | cut -d" " -f 5 | cut -d"=" -f2)
 
         # Ping correcto
@@ -84,10 +87,12 @@ function ping_ip(){
         #read -t 0.5 -n 1 ans
         #echo "ANS: $ans"
         #[ "$ans" = q ] && tmux detach-client
-
     done < <(ping -O "$ip")&
-    while read -s -n 1 ans; do
-        [[ "$ans" = @("q"|"") ]] && tmux kill-session -t ping-session
+
+    #while read -s -n 1 ans; do
+    while read -s -n 1 tecla; do
+        [[ "${tecla,,}" = @("q"|"") ]] && tmux kill-session -t ping-session
+        [[ "${tecla,,}" = @("l") ]] && tmux detach-client
     done
 }
 export -f ping_ip
@@ -120,7 +125,13 @@ for ip in "${ips[@]}"; do
     tmux split-window -h -t ping-session
 done
 tmux send-keys "exit" C-m
-tmux select-layout even-horizonal    # No rula
+sleep 1 # Hay que esperar un poco para que funcion el select-layout
+tmux select-layout even-horizontal
 tmux attach-session -t ping-session
 
+# En caso de que no se haya matado la sesion
+while tmux list-session | grep ping-session &> /dev/null; do
+    less "$log_file"
+    tmux attach-session -t ping-session
+done
 
