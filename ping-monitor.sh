@@ -2,7 +2,8 @@
 
 ##############################
 #   Modificar log.
-#   Mostrar MAC en vez de IP
+#   Mostrar MAC en vez de IP (o no)
+#   $(tput bold)
 ##############################
 
 # Comprobar que se ejecuta como adminístrador
@@ -70,7 +71,7 @@ function ping_ip(){
             [ "$error" -eq 0 ] && echo -en "${Cl_r}" && ((no_error_count++))
 
             # Si lleva 30 pings seguidos sin error.
-            [ "$no_error_count" -eq 30 ] && echo -e "[$(date +%Y-%m-%d\ %H:%M:%S)] [\\${color}${ip}${Cl_end}]\t[${Cl_r}Error Fin${Cl_end}]" >> "$log_file" && error=1 && no_error_count=0
+            [ "$no_error_count" -eq 30 ] && echo -e "[$(date +%Y-%m-%d\ %H:%M:%S)] [\\${color}${ip}${Cl_end}]\t[${Cl_r}ERROR FIN${Cl_end}]" >> "$log_file" && error=1 && no_error_count=0
             echo -e "$linea${Cl_end}"
 
         # Ping incorrecto
@@ -79,7 +80,7 @@ function ping_ip(){
             echo -e "[\\${color}${ip}${Cl_end}] ${Cl_r}$linea${Cl_end}"
             no_error_count=0
             # Si no estaba en modo de error.
-            [ "$error" -eq 1 ] && echo -e "[$(date +%Y-%m-%d\ %H:%M:%S)] [\\${color}${ip}${Cl_end}]\t[Error Inicio]" >> "$log_file" && error=0
+            [ "$error" -eq 1 ] && echo -e "[$(date +%Y-%m-%d\ %H:%M:%S)] [\\${color}${ip}${Cl_end}]\t[ERROR INICIO]" >> "$log_file" && error=0
         fi
 
         icmp_last="$icmp"
