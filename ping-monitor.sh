@@ -110,7 +110,7 @@ params=("${@,,}")
 # Comprobar las macs introducidas y almacenarlas en el array macs
 for mac in "${params[@]:1}"; do
     # Comprobar si la mac tiene un formato válido.
-    [[ "$mac" =~ ^(([0-9a-f]){2}:){5}([0-9a-f]){2}$ ]] && macs+=("$mac") || { echo "Error: MAC $mac no tiene un formato adecuado"; exit 3; }
+    [[ "$mac" =~ ^(([0-9a-f]){2}:){5}([0-9a-f]){2}$ ]] && macs+=("$mac") || { echo "Error: MAC $mac no tiene un formato adecuado"; exit 3 ; }
 done
 
 
