@@ -1,7 +1,6 @@
 #!/bin/bash
 
 #=====================================================================================
-#   Alumno: Antonio Sánchez López
 #
 #   USO
 #   - Teclas Enter y q cierran el programa.
