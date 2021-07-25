@@ -16,7 +16,7 @@ In case of incorrect ping, it will enter error mode, show in red the fail and sa
 ```bash
 ./ping-monitor.sh interface macs
 
-./ping-monitor.sh enp2s0 15:32:27:d2:bd:bc 04:40:57:35:bf:e6
+./ping-monitor.sh enp2s0 08:00:27:77:e8:67 08:00:27:99:17:A3
 ```
 
 ### Dependences
