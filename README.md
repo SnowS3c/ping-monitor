@@ -20,9 +20,9 @@ In case of incorrect ping, it will enter error mode, show in red the fail and sa
 ```
 
 ### Dependences
+* arp-scan
 * tmux
 * tput
-* arp-scan
 
 ## View of the execution
 ![ping-session1](https://user-images.githubusercontent.com/73076414/126896563-e54d0636-2918-4dc9-9203-1d9f2487a25a.png)
