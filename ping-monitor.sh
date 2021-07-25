@@ -2,37 +2,37 @@
 
 #=====================================================================================
 #
-#   USO
-#   - Teclas Enter y q cierran el programa.
-#   - Tecla l muestra el fichero de log. Dentro del fichero pulsar q para salir.
+#   USAGE
+#	- Enter and Q keys close the program
+#	- L key to show the log file. Q to exit view
 #
-#   EJEMPLO
-#       bash ping-monitor.sh enp2s0 08:00:27:77:e8:67 08:00:27:99:17:A3 08:00:27:A0:51:6E
+#   EXAMPLE
+#       ping-monitor.sh enp2s0 08:00:27:77:e8:67 08:00:27:99:17:A3 08:00:27:A0:51:6E
 #
 #=====================================================================================
 
 
-# Comprobar que se ejecuta como adminístrador
-! [ $(id -u) -eq 0 ] && echo "Se necesitan permisos de adminístrador" && exit 1
+# Check root privileges
+! [ $(id -u) -eq 0 ] && echo "Administrative privileges needed" && exit 1
 
 
 #=====================================================================================
 #
-#   VARIABLES GLOBALES
+#   GLOBAL VARIABLES
 #
 #=====================================================================================
 ips=()
 macs=()
 log_file="/var/log/ping-monitor.log"
-Cl_end="\e[0m"      # Color normal
-Cl_bold="\e[01m"    # Negrita
-Cl_r="\e[31m"       # Color rojo
-Cl_v="\e[32m"       # Color verde
-Cl_m="\e[33m"       # Color marron
-Cl_a="\e[34m"       # Color azul
-Cl_p="\e[35m"       # Color morado
-Cl_c="\e[36m"       # Color cyan
-colores=($Cl_v $Cl_m $Cl_a $Cl_p $Cl_c)
+Cl_end="\e[0m"      # Standard
+Cl_bold="\e[01m"    # Bold
+Cl_r="\e[31m"       # Red
+Cl_v="\e[32m"       # Green verde
+Cl_m="\e[33m"       # Brown
+Cl_a="\e[34m"       # Blue
+Cl_p="\e[35m"       # Purple
+Cl_c="\e[36m"       # Cyan
+colors=($Cl_v $Cl_m $Cl_a $Cl_p $Cl_c)
 
 export log_file
 export Cl_end
@@ -48,57 +48,86 @@ export Cl_c
 
 
 #=====================================================================================
-#   FUNCIÓN obtener_ips
+#   FUNCTION Ctrl_c
 #
-#   Función para obtener las ips de cada máquina y almacenarlas en el array ips
+#   Function to control the program flow
 #=====================================================================================
-function obtener_ips(){
-    echo -n "Buscando macs..."
-    arp_table=$(arp-scan --interface "$interfaz" -l)
+function ctrl_c(){
+	tmux kill-session -t ping-session 2>/dev/null
+	tput cnorm
+}
+
+export -f ctrl_c
+
+
+#=====================================================================================
+#   FUNCTION get_ips
+#
+#	Function to obtain the ip of each machine and save it in the ips array
+#=====================================================================================
+function get_ips(){
+    echo -ne "\t[+] Checking macs and looking for ips..."
+    arp_table=$(arp-scan --interface "$interface" -l)
     for id in "${!macs[@]}"; do
         ip=$(echo "$arp_table" | grep -i "${macs[$id]}" | awk {' print $1 '})
         [ "$ip" ] && ips["$id"]="$ip"
     done
-    echo "Hecho!"
+    echo "Done!"
 }
 
 
 #=====================================================================================
-#   FUNCIÓN ping_ip
+#   FUNCTION ping_ip
 #
-#   Función que ejecuta los pings en segundo plano
+#	Execute ping and check if it is correct
 #=====================================================================================
 function ping_ip(){
+	tput civis
+	trap ctrl_c 2
     ip="$1"
     mac="$2"
-    color="$3"          # Color para mostrar la ip
+    color="$3"
     icmp_last=0
-    error=1             # Para indicar el modo de error -  1: falso  0: verdadero
-    no_error_count=0    # Variable que cuenta los pings correctos consecutivos.
-    while read -r linea; do
-        [[ "$linea" =~ ^PING ]] && sleep 1 && clear && continue   # Para no mostrar la primera línea del PING
-        icmp=$(echo "$linea" | cut -d" " -f 5 | cut -d"=" -f2)    # icmp del ping actual
+    error=1             # Error Mode - 1: false  0: true
+    no_error_count=0    # Consecutive successful pings
+    while read -r line; do
+		# Hide the first line of ping
+        if [[ "$line" =~ ^PING ]]; then
+		   sleep 1
+		   clear
+		   continue
+		fi
 
-        # En caso de Ping correcto
-        if [[ "$linea" =~ ^64\ bytes ]] && [[ "$icmp" -eq $((icmp_last+1)) ]]; then
-            echo -en "[\\${color}${ip}${Cl_end}]"
+		# Current icmp
+        icmp=$(echo "$line" | cut -d" " -f 5 | cut -d"=" -f2)
 
-            # Si esta en modo de error muestro el ping en color rojo y sumo 1 al contador de pings sin error.
-            [ "$error" -eq 0 ] && echo -en "${Cl_r}" && ((no_error_count++))
+        # Correct Ping
+        if [[ "$line" =~ ^64\ bytes ]] && [[ "$icmp" -eq $((icmp_last+1)) ]]; then
+            echo -en "[\\${color}${Cl_bold}${ip}${Cl_end}] "
 
-            # Si lleva 30 pings seguidos sin error, escribo en el fichero de log el fin del error y modifico el valor de la variable error a 1 y el contador de ping sin errores a 0.
-            [ "$no_error_count" -eq 30 ] && echo -e "[$(date +%Y-%m-%d\ %H:%M:%S)] [${Cl_bold}\\${color}${mac}${Cl_end}]\t[${Cl_bold}${Cl_r}ERROR FIN${Cl_end}]" >> "$log_file" && error=1 && no_error_count=0
+			# If error mode is active, show the ping in red and add 1 to ping counter without error
+            if [ "$error" -eq 0 ]; then
+			   echo -en "${Cl_r}"
+			   ((no_error_count++))
+			fi
 
+			# If it takes 30 pings in a row without error, write the end of the error in the log file and modify the value of the error variable to 1(false) and the ping counter without errors to 0.
+            if [ "$no_error_count" -eq 30 ]; then
+			   echo -e "[$(date +%Y-%m-%d\ %H:%M:%S)] [${Cl_bold}\\${color}${mac}${Cl_end}]\t[${Cl_bold}${Cl_r}ERROR END${Cl_end}]" >> "$log_file"
+			   error=1
+			   no_error_count=0
+			fi
 
-            echo -e "$linea${Cl_end}"
+			# Show ping
+            echo -e "$line${Cl_end}"
 
-        # En caso de Ping incorrecto
+        # Failed ping
         else
-            # Muestro el ping de color rojo
-            echo -e "[\\${color}${ip}${Cl_end}] ${Cl_r}$linea${Cl_end}"
+			# Show ping in red
+            echo -e "[\\${color}${Cl_bold}${ip}${Cl_end}] ${Cl_r}$line${Cl_end}"
             no_error_count=0
-            # Si no estaba en modo de error, escribo en el fichero de log la hora del inicio del error y modifico el valor de la variable error a 0 indicando que está en modo de error.
-            [ "$error" -eq 1 ] && echo -e "[$(date +%Y-%m-%d\ %H:%M:%S)] [${Cl_bold}\\${color}${mac}${Cl_end}]\t[${Cl_bold}ERROR INICIO${Cl_end}]" >> "$log_file" && error=0
+			# If it was not in error mode, I write in the log file the time of the start of the error and modify the value of the error variable to 0(true), indicating that it is in error mode.
+            [ "$error" -eq 1 ] && echo -e "[$(date +%Y-%m-%d\ %H:%M:%S)] [${Cl_bold}\\${color}${mac}${Cl_end}]\t[${Cl_bold}ERROR START${Cl_end}]" >> "$log_file" && error=0
         fi
 
         icmp_last="$icmp"
@@ -106,11 +135,11 @@ function ping_ip(){
     done < <(ping -O "$ip")&
 
 
-    # En caso de pulsar la q o enter, mata la sesion de tmux.
-    # En caso de pulsar la l, envía la sesion a segundo plano.
+	# If you press q or enter, kill the tmux session
+	# If you press l, it sends the session to the background and show the log file
     while read -s -n 1 tecla; do
         [[ "${tecla,,}" = @("q"|"") ]] && tmux kill-session -t ping-session
-        [[ "${tecla,,}" = @("l") ]] && tmux detach-client
+        [[ "${tecla,,}" = "l" ]] && tmux detach-client
     done
 }
 
@@ -121,18 +150,28 @@ export -f ping_ip
 
 #=====================================================================================
 #
-#   COMPROBACIÓN DE PARÁMETROS
+#   CHECK ARGUMENTS
 #
 #=====================================================================================
-# Compruebo si la interfaz introducida es correcta.
-[ -n "$1" ] && ip a | egrep "$1:" &>/dev/null && interfaz="$1" || { echo "Error: La interfaz no existe"; exit 2 ; }
+# Check if the interface exists
+if [ -n "$1" ] && ip a | egrep "$1:" &>/dev/null; then
+	interface="$1"
+else
+	echo -e "\t[-] Error: the interface doesn't exist"
+	exit 2
+fi
 
-# Guardo todos los parámetros en el array params
+# Save all the parameters in the array
 params=("${@,,}")
 
-# Compruebo las macs introducidas y las almaceno en el array macs
+# Check if the macs are in valid format
 for mac in "${params[@]:1}"; do
-    [[ "$mac" =~ ^(([0-9a-f]){2}:){5}([0-9a-f]){2}$ ]] && macs+=("$mac") || { echo "Error: MAC $mac no tiene un formato adecuado"; exit 3 ; }
+    if [[ "$mac" =~ ^(([0-9a-f]){2}:){5}([0-9a-f]){2}$ ]]; then
+		macs+=("$mac")
+	else
+		echo -e "[-] Error: MAC $mac not valid"
+		exit 3
+	fi
 done
 
 
@@ -140,35 +179,37 @@ done
 
 #=====================================================================================
 #
-#   INICIALIZANDO
+#	MAIN PROGRAM
 #
 #=====================================================================================
-obtener_ips
-tmux new-session -s ping-session -d     # Creo una sesion de tmux en segundo plano
+tput civis
+get_ips
+tmux new-session -s ping-session -d
 
 
-# Escribo en el fichero de log la fecha y hora de inicio
-echo -e "[$(date +%Y-%m-%d\ %H:%M:%S)] ###################### INICIO PING ###########################################" >> "$log_file"
+# Write the session start dato to the log file
+echo -e "[$(date +%Y-%m-%d\ %H:%M:%S)] ###################### START PING ############################################" >> "$log_file"
 
-i=0 # contador para seleccionar el color de cada ip
+i=0 # counter to select the color of each ip
 for id in "${!ips[@]}"; do
-    color=${colores[$i]}
+    color=${colors[$i]}
     ((i++))
     tmux send-keys "ping_ip ${ips[$id]} ${macs[$id]} $color" C-m
     tmux split-window -h -t ping-session
 done
-tmux send-keys "exit" C-m   # Para cerrar la ultima ventana de tmux que se crea y que no muestra nada
+tmux send-keys "exit" C-m
 
-sleep 1 # Hay que esperar un poco para que funcione el select-layout
+sleep 1
 tmux select-layout even-horizontal
 tmux attach-session -t ping-session
 
-# En caso de que se envie la sesion de tmux a segundo plano muestro el fichero de log.
-# Este bucle se ejecuta hasta que se cierra la sesion de tmux
+# In case the tmux session is sent to the background, show the log file
+# This loop runs until the tmux session is closed
 while tmux list-session | grep ping-session &> /dev/null; do
     less -R +G "$log_file"
     tmux attach-session -t ping-session
 done
 
-# Marco en el fichero de log el final del ping
+tput cnorm
+# Write the end of the session in the log file
 echo -e "####################################################################################################\n\n" >> "$log_file"
