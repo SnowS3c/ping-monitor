@@ -143,9 +143,9 @@ function ping_ip(){
 
 	# If you press q or enter, kill the tmux session
 	# If you press l, it sends the session to the background and show the log file
-    while read -s -n 1 tecla; do
-        [[ "${tecla,,}" = @("q"|"") ]] && tmux kill-session -t ping-session
-        [[ "${tecla,,}" = "l" ]] && tmux detach-client
+    while read -s -n 1 key; do
+        [[ "${key,,}" = @("q"|"") ]] && tmux kill-session -t ping-session
+        [[ "${key,,}" = "l" ]] && tmux detach-client
     done
 }
 
