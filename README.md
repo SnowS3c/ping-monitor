@@ -1,5 +1,5 @@
 # Ping Monitor
-This script continually checks connectivity to multiple machines on the network..
+This script continuously checks connectivity to multiple machines on the network..
 
 The script will get the IP address of each MAC from the interace passed as the first parameter.
 
