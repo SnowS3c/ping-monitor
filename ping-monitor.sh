@@ -13,7 +13,7 @@
 
 
 # Check root privileges
-! [ $(id -u) -eq 0 ] && echo "Administrative privileges needed" && exit 1
+! [ "$(id -u)" -eq 0 ] && echo "Administrative privileges needed" && exit 1
 
 
 #=====================================================================================
@@ -32,7 +32,7 @@ Cl_m="\e[33m"       # Brown
 Cl_a="\e[34m"       # Blue
 Cl_p="\e[35m"       # Purple
 Cl_c="\e[36m"       # Cyan
-colors=($Cl_v $Cl_m $Cl_a $Cl_p $Cl_c)
+colors=("$Cl_v" "$Cl_m" "$Cl_a" "$Cl_p" "$Cl_c")
 
 export log_file
 export Cl_end
@@ -55,6 +55,9 @@ export Cl_c
 function ctrl_c(){
 	tmux kill-session -t ping-session 2>/dev/null
 	tput cnorm
+	# Write the end of the session in the log file
+	echo -e "####################################################################################################\n\n" >> "$log_file"
+
 }
 
 export -f ctrl_c
@@ -127,7 +130,10 @@ function ping_ip(){
             echo -e "[\\${color}${Cl_bold}${ip}${Cl_end}] ${Cl_r}$line${Cl_end}"
             no_error_count=0
 			# If it was not in error mode, I write in the log file the time of the start of the error and modify the value of the error variable to 0(true), indicating that it is in error mode.
-            [ "$error" -eq 1 ] && echo -e "[$(date +%Y-%m-%d\ %H:%M:%S)] [${Cl_bold}\\${color}${mac}${Cl_end}]\t[${Cl_bold}ERROR START${Cl_end}]" >> "$log_file" && error=0
+            if [ "$error" -eq 1 ]; then
+				echo -e "[$(date +%Y-%m-%d\ %H:%M:%S)] [${Cl_bold}\\${color}${mac}${Cl_end}]\t[${Cl_bold}ERROR START${Cl_end}]" >> "$log_file"
+				error=0
+			fi
         fi
 
         icmp_last="$icmp"
@@ -154,7 +160,7 @@ export -f ping_ip
 #
 #=====================================================================================
 # Check if the interface exists
-if [ -n "$1" ] && ip a | egrep "$1:" &>/dev/null; then
+if [ -n "$1" ] && ip a | grep -E "$1:" &>/dev/null; then
 	interface="$1"
 else
 	echo -e "\t[-] Error: the interface doesn't exist"
