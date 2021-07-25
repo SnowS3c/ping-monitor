@@ -32,3 +32,5 @@ In case of incorrect ping, it will enter error mode, show in red the fail and sa
 ## View of the log file
 ![ping-session_log-file](https://user-images.githubusercontent.com/73076414/126896538-58170710-2ad1-4ad5-8729-fb8081162d06.png)
 
+## License
+License is [GPLv3](LICENSE)
