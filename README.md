@@ -19,6 +19,11 @@ In case of incorrect ping, it will enter error mode, show in red the fail and sa
 ./ping-monitor.sh enp2s0 15:32:27:d2:bd:bc 04:40:57:35:bf:e6
 ```
 
+### Dependences
+* tmux
+* tput
+* arp-scan
+
 ## View of the execution
 ![ping-session1](https://user-images.githubusercontent.com/73076414/126896563-e54d0636-2918-4dc9-9203-1d9f2487a25a.png)
 ![ping-session22](https://user-images.githubusercontent.com/73076414/126897372-c7cc8a9c-28af-40d5-99fc-557c2762e79d.png)
